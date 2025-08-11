@@ -1,27 +1,21 @@
+"""Model for announcements in the PESU Academy system."""
+
 import datetime
-from typing import Optional
+
+from pydantic import BaseModel
 
 
-class AnnouncementFile:
-    def __init__(self, name: str, content: bytes):
-        self.name = name
-        self.content = content
+class Announcement(BaseModel):
+    """Represents an announcement in the PESU Academy system.
 
+    Attributes:
+        title (str): The title of the announcement.
+        date (datetime.date): The date of the announcement.
+        content (str): The content of the announcement.
+        attachments (Optional[List[str]]): Optional list of attachment links related to the announcement.
+    """
 
-class Announcement:
-    def __init__(
-        self,
-        title: str,
-        date: datetime.date,
-        content: str,
-        img: str = None,
-        files: Optional[list[AnnouncementFile]] = None,
-    ):
-        self.title = title
-        self.date = date
-        self.content = content
-        self.img = img
-        self.files = files
-
-    def __str__(self):
-        return f"{self.__dict__}"
+    title: str
+    date: datetime.date
+    content: str
+    attachments: list[str] | None = None

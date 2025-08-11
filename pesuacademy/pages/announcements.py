@@ -1,124 +1,92 @@
+"""This module handles the scraping of announcements from the PESU Academy website."""
+
+import copy
 import datetime
 import re
-from typing import Optional
 
-import urllib3
-
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-import requests_html
+import httpx
 from bs4 import BeautifulSoup
 
-from pesuacademy.models.announcement import Announcement, AnnouncementFile
+from pesuacademy import constants
+from pesuacademy.models import Announcement
+from pesuacademy.util import _build_params
 
 
-class AnnouncementPageHandler:
+class _AnnouncementPageHandler:
     @staticmethod
-    def get_announcement_by_id(
-        session: requests_html.HTMLSession, csrf_token: str, announcement_id: str
-    ) -> Announcement:
-        url = "https://www.pesuacademy.com/Academy/s/studentProfilePESUAdmin"
-        data = {
-            "controllerMode": "6411",
-            "actionType": "4",
-            "AnnouncementId": announcement_id,
-            "menuId": "667",
-        }
-        headers = {
-            "accept": "*/*",
-            "accept-language": "en-IN,en-US;q=0.9,en-GB;q=0.8,en;q=0.7",
-            "content-type": "application/x-www-form-urlencoded",
-            "origin": "https://www.pesuacademy.com",
-            "priority": "u=1, i",
-            "referer": "https://www.pesuacademy.com/Academy/s/studentProfilePESU",
-            "sec-ch-ua": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
-            "sec-ch-ua-mobile": "?0",
-            "sec-ch-ua-platform": '"Windows"',
-            "sec-fetch-dest": "empty",
-            "sec-fetch-mode": "cors",
-            "sec-fetch-site": "same-origin",
-            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-            "x-csrf-token": csrf_token,
-            "x-requested-with": "XMLHttpRequest",
-        }
+    async def _get_page(session: httpx.AsyncClient) -> list[Announcement]:
+        """Fetches the main announcements page and scrapes all announcements.
 
-        response = session.post(url, data=data, headers=headers)
-        if response.status_code != 200:
-            data["actionType"] = "6"
-            response = session.post(url, data=data, headers=headers)
+        Args:
+            session (httpx.AsyncClient): The HTTP client session to use for requests.
+
+        Returns:
+            List[Announcement]: A list of Announcement objects containing the scraped data.
+
+        Raises:
+            httpx.HTTPStatusError: If the request to the announcements page fails.
+        """
+        params = _build_params(constants._PageURLParams.Announcements, url="studentProfilePESUAdmin")
+        response = await session.get(constants.PAGES_BASE_URL, params=params)
+        response.raise_for_status()
 
         soup = BeautifulSoup(response.text, "lxml")
 
-        title = soup.find("h4", class_="text-info").text.strip()
-        date = soup.find("span", class_="text-muted text-date pull-right").text.strip()
-        date = datetime.datetime.strptime(date, "%d-%B-%Y").date()
+        announcements = []
 
-        content_tag = soup.find("div", class_="col-md-12")
-        if content_tag is None:
-            content_tag = soup.find("div", class_="col-md-8")
-        paragraph_or_list_tags = content_tag.find_all(["p", "li"])
-        content = "\n".join([tag.text.strip() for tag in paragraph_or_list_tags])
+        # Find all announcement wrappers
+        announcement_wrappers = soup.find_all("div", class_="elem-info-wrapper")
 
-        img_tag = soup.find("img", class_="img-responsive")
-        img = img_tag.attrs["src"] if img_tag else None
+        for wrapper in announcement_wrappers:
+            try:
+                # Title
+                title_tag = wrapper.find("h4", class_="text-info")
+                title = title_tag.text.strip() if title_tag else "No Title"
 
-        attachment_tags = [
-            tag
-            for tag in content_tag.find_all("a")
-            if tag.text.strip().endswith(".pdf")
-        ]
-        attachments = list()
-        for attachment_tag in attachment_tags:
-            attachment_name = attachment_tag.text.strip()
-            pattern = re.compile(r"handleDownloadAnoncemntdoc\('(\d+)'\)")
-            attachment_id = re.findall(pattern, attachment_tag.attrs["href"])[0]
-            response = session.get(
-                f"https://pesuacademy.com/Academy/s/studentProfilePESUAdmin/downloadAnoncemntdoc/{attachment_id}",
-                headers={"x-csrf-token": csrf_token},
-                verify=False,
-            )
-            attachment_bytes = response.content
-            attachments.append(
-                AnnouncementFile(name=attachment_name, content=attachment_bytes)
-            )
+                # Date
+                date_tag = wrapper.find("span", class_="text-muted")
+                date_str = date_tag.text.strip() if date_tag else ""
+                date = datetime.datetime.strptime(date_str, "%d-%B-%Y").date()
 
-        return Announcement(
-            title=title, date=date, content=content, img=img, files=attachments
-        )
+                content_div = wrapper.find("div", class_="col-md-12")
+                if not content_div:
+                    continue
 
-    def get_page(
-        self,
-        session: requests_html.HTMLSession,
-        csrf_token: str,
-        start_date: Optional[datetime.date] = None,
-        end_date: Optional[datetime.date] = None,
-    ) -> list[Announcement]:
-        url = "https://www.pesuacademy.com/Academy/s/studentProfilePESUAdmin"
-        query = {
-            "menuId": "667",
-            "controllerMode": "6411",
-            "actionType": "5",
-            "_": str(int(datetime.datetime.now().timestamp() * 1000)),
-        }
-        response = session.get(url, allow_redirects=False, params=query)
-        if response.status_code != 200:
-            raise ConnectionError("Unable to fetch announcement data.")
-        soup = BeautifulSoup(response.text, "lxml")
+                # Content attachments
+                attachments = []
+                link_tags = content_div.find_all("a", href=re.compile(r"handleDownloadAnoncemntdoc"))
+                for link_tag in link_tags:
+                    href_attr = link_tag.get("href", "")
+                    match = re.search(r"handleDownloadAnoncemntdoc\('(\d+)'\)", href_attr)
+                    if match:
+                        doc_id = match.group(1)
+                        # Construct the full download URL
+                        partial_url = f"{constants.BASE_URL}/Academy/s/studentProfilePESUAdmin/downloadAnoncemntdoc/"
+                        full_url = f"{partial_url}{doc_id}"
+                        attachments.append(full_url)
 
-        announcement_ids = soup.find_all("a", class_="pull-right readmorelink")
-        pattern = re.compile(r"handleShowMoreAnnouncement\(\d+, \d+,(\d+)\)")
-        announcement_ids = [
-            pattern.match(ann.attrs.get("onclick")).group(1) for ann in announcement_ids
-        ]
+                # Content without "Read more" attachments and download attachments
+                # To get clean content, we make a copy and remove the elements we don't want
+                content_clone = copy.copy(content_div)
+                if read_more := content_clone.find("a", class_="readmorelink"):
+                    read_more.decompose()
+                for link_div in content_clone.find_all("div"):
+                    if link_div.find("a", href=re.compile(r"handleDownloadAnoncemntdoc")):
+                        link_div.decompose()
+                content = content_clone.text.strip()
 
-        announcements = list()
-        for announcement_id in announcement_ids:
-            announcement = self.get_announcement_by_id(
-                session, csrf_token, announcement_id
-            )
-            if start_date and announcement.date < start_date:
+                announcements.append(
+                    Announcement(
+                        title=title,
+                        date=date,
+                        content=content,
+                        attachments=attachments or None,
+                    )
+                )
+
+            except (AttributeError, ValueError) as e:
+                # Skip any panels that have parsing errors
+                print(f"Skipping a panel due to parsing error: {e}")
                 continue
-            if end_date and announcement.date > end_date:
-                continue
-            announcements.append(announcement)
-        announcements.sort(key=lambda x: x.date, reverse=True)
+
         return announcements
