@@ -1,9 +1,9 @@
 # Makefile for Sphinx documentation
 
-# Path to your package source code
-PACKAGE_DIR = ./pesuacademy
-# Path to your docs source directory
-DOCS_SRC = docs/
+# Path to your package source code (relative to this Makefile)
+PACKAGE_DIR = ../pesuacademy
+# Path to your docs source directory (relative to this Makefile)
+DOCS_SRC = ./
 
 .PHONY: help clean html apidoc
 
