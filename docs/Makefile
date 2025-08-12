@@ -1,20 +1,28 @@
-# Minimal makefile for Sphinx documentation
-#
+# Makefile for Sphinx documentation
 
-# You can set these variables from the command line, and also
-# from the environment for the first two.
-SPHINXOPTS    ?=
-SPHINXBUILD   ?= sphinx-build
-SOURCEDIR     = .
-BUILDDIR      = _build
+# Path to your package source code
+PACKAGE_DIR = ../pesuacademy
+# Path to your docs source directory
+DOCS_SRC = ./
 
-# Put it first so that "make" without argument is like "make help".
+.PHONY: help clean html apidoc
+
 help:
-	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	@echo "Usage:"
+	@echo "  make apidoc    # Generate rst files from package source"
+	@echo "  make html      # Build HTML docs"
+	@echo "  make clean     # Remove generated files"
 
-.PHONY: help Makefile
+# Generate .rst files from your package source code
+apidoc:
+	sphinx-apidoc -f -o $(DOCS_SRC) $(PACKAGE_DIR)
 
-# Catch-all target: route all unknown targets to Sphinx using the new
-# "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
-%: Makefile
-	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+# Build the HTML documentation, regenerates rst first
+html: apidoc
+	sphinx-build -b html $(DOCS_SRC) $(DOCS_SRC)/_build/html
+
+# Clean generated files
+clean:
+	rm -rf $(DOCS_SRC)/_build
+	rm -f $(DOCS_SRC)/pesuacademy.*.rst
+	rm -f $(DOCS_SRC)/modules.rst
