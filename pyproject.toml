@@ -41,6 +41,11 @@ tests = [
     "pytest-cov>=6.2.1",
     "ruff>=0.12.7",
 ]
+docs = [
+    "sphinx>=6.0",
+    "sphinx-rtd-theme>=1.2.1",
+    "sphinxcontrib-napoleon>=0.7",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -79,8 +84,8 @@ line-length = 120
 target-version = "py312"
 exclude = [
     "tests/",
+    "docs/",
     "scripts/",
-    "examples/"
 ]
 
 [tool.ruff.format]
