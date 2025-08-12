@@ -24,5 +24,5 @@ html: apidoc
 # Clean generated files
 clean:
 	rm -rf $(DOCS_SRC)/_build
-	rm -rf $(DOCS_SRC)/pesuacademy.*
-	rm -f $(DOCS_SRC)/*.rst
+	rm -f $(DOCS_SRC)/pesuacademy.*.rst
+	rm -f $(DOCS_SRC)/modules.rst
