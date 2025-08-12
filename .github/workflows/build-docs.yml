@@ -1,32 +1,45 @@
-name: Build Documentation
+name: Build and Deploy Documentation
 
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+    branches:
+      - main
+      - dev
 
 permissions:
   contents: write
 
 jobs:
-  docs:
+  build-and-deploy:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-python@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.11'
+
       - name: Install system dependencies for lxml
         run: |
           sudo apt-get update
           sudo apt-get install -y libxml2-dev libxslt1-dev zlib1g-dev
-      - name: Install dependencies
+
+      - name: Install Python dependencies
         run: |
+          python -m pip install --upgrade pip
           pip install sphinx sphinx_rtd_theme myst_parser
           pip install -r requirements.txt
-      - name: Sphinx build
-        run: |
-          sphinx-build docs _build
+
+      - name: Build HTML docs
+        run: make html
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         with:
-          publish_branch: gh-pages
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: _build/
-          force_orphan: true
+          publish_dir: docs/_build/html
+          publish_branch: gh-pages
+          # Deploy main branch docs to root, dev branch docs under /dev
+          destination_dir: ${{ github.ref == 'refs/heads/main' && '' || 'dev' }}
