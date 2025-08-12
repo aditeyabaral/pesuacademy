@@ -33,7 +33,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Build HTML docs
-        run: make html
+        run: make -C docs html
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
