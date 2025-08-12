@@ -16,8 +16,5 @@ requirements.txt @aditeyabaral
 README.md @aditeyabaral
 LICENSE @aditeyabaral
 
-## Infrastructure and Deployment
-Dockerfile @aditeyabaral
-
 ## Testing
 tests/ @aditeyabaral
