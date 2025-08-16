@@ -14,6 +14,7 @@ from .profile import (
 )
 from .results import Assessment, CourseResult, Credits, SemesterResult
 from .seating_information import SeatingInformation
+from .timetable import ClassSession, TimeSlot, Timetable
 
 __all__ = [
     "Announcement",
@@ -34,4 +35,7 @@ __all__ = [
     "Assessment",
     "CourseResult",
     "Credits",
+    "Timetable",
+    "TimeSlot",
+    "ClassSession",
 ]

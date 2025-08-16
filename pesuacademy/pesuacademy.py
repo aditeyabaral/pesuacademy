@@ -15,6 +15,7 @@ from pesuacademy.models import (
     Profile,
     SeatingInformation,
     SemesterResult,
+    Timetable,
     Topic,
     Unit,
 )
@@ -178,6 +179,17 @@ class PESUAcademy:
             A list of MaterialLink objects.
         """
         return await self._client.get_material_links(topic, material_type_id)
+
+    async def get_timetable(self) -> Timetable:
+        """Fetches the student's timetable.
+
+        Args:
+            None
+
+        Returns:
+            Timetable: A Timetable object containing the student's timetable details.
+        """
+        return await self._client.get_timetable()
 
     async def close(self) -> None:
         """Closes the network session gracefully.

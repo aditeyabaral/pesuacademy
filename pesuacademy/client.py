@@ -12,6 +12,7 @@ from pesuacademy.models import (
     Profile,
     SeatingInformation,
     SemesterResult,
+    Timetable,
     Topic,
     Unit,
 )
@@ -25,6 +26,7 @@ from pesuacademy.pages import (
     _ResultsPageHandler,
     _SeatingInformationHandler,
     _SemesterHandler,
+    _TimetablePageHandler,
     _UnitPageHandler,
 )
 
@@ -117,6 +119,9 @@ class _PesuScraper:
 
     async def get_results(self, semester_id: str) -> SemesterResult:
         return await _ResultsPageHandler._get(self._session, semester_id)
+
+    async def get_timetable(self) -> Timetable:
+        return await _TimetablePageHandler._get(self._session)
 
     async def close(self) -> None:
         await self._session.aclose()
