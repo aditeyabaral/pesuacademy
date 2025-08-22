@@ -6,6 +6,13 @@ BASE_URL = "https://www.pesuacademy.com"
 PAGES_BASE_URL = "/s/studentProfilePESUAdmin"
 SEMESTER_BASE_URL = "/a/studentProfilePESU/getStudentSemestersPESU"
 
+# Expected number of columns in the Seating Information table
+SEATING_INFO_EXPECTED_COLUMNS = 6
+# Expected number of columns in the Attendance table
+ATTENDANCE_EXPECTED_COLUMNS = 4
+# Expected number of columns in the Courses table
+COURSES_EXPECTED_COLUMNS = 4
+
 
 @dataclass(frozen=True)
 class _PageURLParams:
@@ -77,7 +84,7 @@ class _PageURLParams:
         ACTION_TYPE: str = "9"
 
     @dataclass(frozen=True)
-    class SeatingInfo:
+    class SeatingInformation:
         """Static parameters for the Seating Information page."""
 
         MENU_ID: str = "655"
