@@ -1,13 +1,13 @@
 """This module handles the scraping of the timetable from the PESU Academy website."""
 
-import datetime
 import json
 import re
+from datetime import datetime
 
 import httpx
 
 from pesuacademy import constants
-from pesuacademy.models import ClassSession, Slot, Timetable
+from pesuacademy.models import ClassSession, Slot, Time, Timetable
 from pesuacademy.util import _build_params
 
 
@@ -59,12 +59,17 @@ class _TimetablePageHandler:
 
         for slot in template_data:
             order = slot["orderedBy"]
-            start_time = datetime.datetime.strptime(slot["startTime"], "%I:%M:%S %p").strftime("%I:%M %p")
-            end_time = datetime.datetime.strptime(slot["endTime"], "%I:%M:%S %p").strftime("%I:%M %p")
+            start_time = datetime.strptime(slot["startTime"], "%I:%M:%S %p")
+            end_time = datetime.strptime(slot["endTime"], "%I:%M:%S %p")
+            duration = int((end_time - start_time).total_seconds() // 60)
 
             # Check the status: 1 means it's a break, 0 is a class
             is_break = slot.get("timeTableTemplateDetailsStatus") == 1
-            time_slots_info[order] = {"time": f"{start_time} - {end_time}", "is_break": is_break}
+            time_obj = Time(start=start_time.time(), end=end_time.time(), duration=duration)
+            time_slots_info[order] = {
+                "time": time_obj,
+                "is_break": is_break,
+            }
             if order not in ordered_slots:
                 ordered_slots.append(order)
 

@@ -1,5 +1,7 @@
 """Model for TimeTable in the PESU Academy system."""
 
+from datetime import time
+
 from pydantic import BaseModel
 
 
@@ -17,16 +19,30 @@ class ClassSession(BaseModel):
     teacher: str
 
 
+class Time(BaseModel):
+    """Represents the start, end, and duration of a class session.
+
+    Attributes:
+        start (datetime): The start time of the session.
+        end (datetime): The end time of the session.
+        duration (int): The duration of the session in minutes.
+    """
+
+    start: time
+    end: time
+    duration: int
+
+
 class Slot(BaseModel):
     """Represents a single Slot in the timetable (e.g., 8:00 AM - 8:45 AM).
 
     Attributes:
-        time (str): The time of the slot (e.g., 8:00 AM - 8:45 AM).
+        time (Time): The time info for the class.
         is_break (bool): True if this is a break slot, False otherwise.
         session (Optional[ClassSession]): The class session for this slot, if any.
     """
 
-    time: str
+    time: Time
     is_break: bool = False
     session: ClassSession | None = None
 
