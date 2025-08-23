@@ -7,7 +7,7 @@ import re
 import httpx
 
 from pesuacademy import constants
-from pesuacademy.models import ClassSession, TimeSlot, Timetable
+from pesuacademy.models import ClassSession, Slot, Timetable
 from pesuacademy.util import _build_params
 
 
@@ -33,8 +33,9 @@ class _TimetablePageHandler:
         html_content = response.text
         template_data, class_data = _TimetablePageHandler._extract_json_data(html_content)
         time_slots_info, ordered_slots = _TimetablePageHandler._process_template(template_data)
-        time_slots = _TimetablePageHandler._build_time_slots(time_slots_info, ordered_slots, class_data)
-        return Timetable(time_slots=time_slots)
+
+        schedule_by_day = _TimetablePageHandler._build_schedule_by_day(time_slots_info, ordered_slots, class_data)
+        return Timetable(**schedule_by_day)
 
     @staticmethod
     def _extract_json_data(html_content: str) -> tuple[dict, dict]:
@@ -71,49 +72,41 @@ class _TimetablePageHandler:
         return time_slots_info, ordered_slots
 
     @staticmethod
-    def _build_time_slots(
+    def _build_schedule_by_day(
         time_slots_info: dict[int, dict], ordered_slots: list[int], class_data: dict
-    ) -> list[TimeSlot]:
+    ) -> dict[str, list[Slot]]:
         """Reconstructs the weekly time_slots based on the provided data."""
         days_map = {1: "monday", 2: "tuesday", 3: "wednesday", 4: "thursday", 5: "friday", 6: "saturday"}
-        # Each time slot will be a TimeSlot object, which may contain ClassSession objects for each day
-        time_slots: list[TimeSlot] = []
+        schedule_by_day: dict[str, list[Slot]] = {day: [] for day in days_map.values()}
 
-        for slot_order in ordered_slots:
-            slot_info = time_slots_info[slot_order]
-            time_str = slot_info["time"]
-            is_break_slot = slot_info["is_break"]
+        for day_index, day_name in days_map.items():
+            for slot_order in ordered_slots:
+                slot_info = time_slots_info[slot_order]
+                time_str = slot_info["time"]
+                is_break_slot = slot_info["is_break"]
 
-            # Check if this is a break slot
-            if is_break_slot:
-                time_slots.append(TimeSlot(time=time_str, is_break=True))
-                continue
+                class_session = None
+                if not is_break_slot:
+                    # key format: ttDivText_{day_index}_{slot_order}_1
+                    # e.g., ttDivText_3_5_1 for Wednesday's 5th slot
+                    key = f"ttDivText_{day_index}_{slot_order}_1"
 
-            daily_sessions = {}
-            for day_index, day_name in days_map.items():
-                # key format: ttDivText_{day_index}_{slot_order}_1
-                # e.g., ttDivText_3_5_1 for Wednesday's 5th slot
-                key = f"ttDivText_{day_index}_{slot_order}_1"
+                    if key in class_data:
+                        details = class_data[key]
+                        # Extract subject code and name
+                        # Subject details are in the format "ttSubject_&&SubjectCode-SubjectName"
+                        subject_full = details[0].split("_&&")[-1]
+                        # Use regex to extract subject code and name while handling optional "(LAB)" suffix
+                        # Subject code can be in the format "UE24CS151B (LAB)" or "UE24CS151B"
+                        code_match = re.match(r"([A-Z0-9]+(?:\s*\(LAB\))?)\s*-\s*(.*)", subject_full)
+                        if code_match:
+                            subject_code, subject_name = code_match.groups()
+                        else:
+                            subject_code, subject_name = "N/A", subject_full
+                        # Extract teacher names
+                        # Teacher names are in the format "ttFaculty_&&Teacher Name"
+                        teachers = [d.split("_&&")[-1] for d in details[1:] if "ttFaculty" in d]
 
-                if key in class_data:
-                    details = class_data[key]
-                    # Extract subject code and name
-                    # Subject details are in the format "ttSubject_&&SubjectCode-SubjectName"
-                    subject_full = details[0].split("_&&")[-1]
-                    # Use regex to extract subject code and name while handling optional "(LAB)" suffix
-                    # Subject code can be in the format "UE24CS151B (LAB)" or "UE24CS151B"
-                    code_match = re.match(r"([A-Z0-9]+(?:\s*\(LAB\))?)\s*-\s*(.*)", subject_full)
-                    if code_match:
-                        subject_code, subject_name = code_match.groups()
-                    else:
-                        subject_code, subject_name = "N/A", subject_full
-                    # Extract teacher names
-                    # Teacher names are in the format "ttFaculty_&&Teacher Name"
-                    teachers = [d.split("_&&")[-1] for d in details[1:] if "ttFaculty" in d]
-
-                    daily_sessions[day_name] = ClassSession(
-                        code=subject_code, name=subject_name, teacher=", ".join(teachers)
-                    )
-
-            time_slots.append(TimeSlot(time=time_str, is_break=False, **daily_sessions))
-        return time_slots
+                        class_session = ClassSession(code=subject_code, name=subject_name, teacher=", ".join(teachers))
+                schedule_by_day[day_name].append(Slot(time=time_str, is_break=is_break_slot, session=class_session))
+        return schedule_by_day

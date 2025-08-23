@@ -7,8 +7,8 @@ class ClassSession(BaseModel):
     """Represents a single class session at a specific time.
 
     Attributes:
-        course_code (str): The code of the subject.
-        course_name (str): The name of the subject.
+        code (str): The code of the course.
+        name (str): The name of the course.
         teacher (str): The name of the teacher for the class.
     """
 
@@ -17,35 +17,35 @@ class ClassSession(BaseModel):
     teacher: str
 
 
-class TimeSlot(BaseModel):
-    """Represents a single row in the timetable (e.g., 8:00 AM - 8:45 AM).
+class Slot(BaseModel):
+    """Represents a single Slot in the timetable (e.g., 8:00 AM - 8:45 AM).
 
     Attributes:
-        time (str): The time slot for the class (e.g., "8:00 AM - 8:45 AM").
-        is_break (bool): Indicates if this time slot is a break.
-        monday (Optional[ClassSession]): Class session on Monday, if any.
-        tuesday (Optional[ClassSession]): Class session on Tuesday, if any.
-        wednesday (Optional[ClassSession]): Class session on Wednesday, if any.
-        thursday (Optional[ClassSession]): Class session on Thursday, if any.
-        friday (Optional[ClassSession]): Class session on Friday, if any.
-        saturday (Optional[ClassSession]): Class session on Saturday, if any.
+        time (str): The time of the slot (e.g., 8:00 AM - 8:45 AM).
+        is_break (bool): True if this is a break slot, False otherwise.
+        session (Optional[ClassSession]): The class session for this slot, if any.
     """
 
     time: str
     is_break: bool = False
-    monday: ClassSession | None = None
-    tuesday: ClassSession | None = None
-    wednesday: ClassSession | None = None
-    thursday: ClassSession | None = None
-    friday: ClassSession | None = None
-    saturday: ClassSession | None = None
+    session: ClassSession | None = None
 
 
 class Timetable(BaseModel):
     """The main model to hold the entire weekly schedule.
 
     Attributes:
-        time_slots (List[TimeSlot]): A list of time slots representing the weekly schedule.
+        monday (List[Slot]): The schedule for Monday.
+        tuesday (List[Slot]): The schedule for Tuesday.
+        wednesday (List[Slot]): The schedule for Wednesday.
+        thursday (List[Slot]): The schedule for Thursday.
+        friday (List[Slot]): The schedule for Friday.
+        saturday (List[Slot]): The schedule for Saturday.
     """
 
-    time_slots: list[TimeSlot]
+    monday: list[Slot]
+    tuesday: list[Slot]
+    wednesday: list[Slot]
+    thursday: list[Slot]
+    friday: list[Slot]
+    saturday: list[Slot]
