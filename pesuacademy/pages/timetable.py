@@ -35,7 +35,7 @@ class _TimetablePageHandler:
         time_slots_info, ordered_slots = _TimetablePageHandler._process_template(template_data)
 
         schedule_by_day = _TimetablePageHandler._build_schedule_by_day(time_slots_info, ordered_slots, class_data)
-        return Timetable(**schedule_by_day)
+        return Timetable(days=schedule_by_day)
 
     @staticmethod
     def _extract_json_data(html_content: str) -> tuple[dict, dict]:
@@ -108,10 +108,10 @@ class _TimetablePageHandler:
                             subject_code, subject_name = code_match.groups()
                         else:
                             subject_code, subject_name = "N/A", subject_full
-                        # Extract teacher names
-                        # Teacher names are in the format "ttFaculty_&&Teacher Name"
-                        teachers = [d.split("_&&")[-1] for d in details[1:] if "ttFaculty" in d]
+                        # Extract faculty names
+                        # faculty names are in the format "ttFaculty_&&faculty Name"
+                        facultys = [d.split("_&&")[-1] for d in details[1:] if "ttFaculty" in d]
 
-                        class_session = ClassSession(code=subject_code, name=subject_name, teacher=", ".join(teachers))
+                        class_session = ClassSession(code=subject_code, name=subject_name, faculty=", ".join(facultys))
                 schedule_by_day[day_name].append(Slot(time=time_str, is_break=is_break_slot, session=class_session))
         return schedule_by_day

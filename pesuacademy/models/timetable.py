@@ -1,6 +1,7 @@
 """Model for TimeTable in the PESU Academy system."""
 
 from datetime import time
+from enum import Enum
 
 from pydantic import BaseModel
 
@@ -11,12 +12,12 @@ class ClassSession(BaseModel):
     Attributes:
         code (str): The code of the course.
         name (str): The name of the course.
-        teacher (str): The name of the teacher for the class.
+        faculty (str): The name(s) of the faculty for the class.
     """
 
     code: str
     name: str
-    teacher: str
+    faculty: str
 
 
 class Time(BaseModel):
@@ -44,24 +45,28 @@ class Slot(BaseModel):
 
     time: Time
     is_break: bool = False
-    session: ClassSession | None = None
+    session: ClassSession | None = ClassSession(code="N/A", name="N/A", faculty="N/A")
+
+
+class Weekday(str, Enum):
+    """Enumeration for the days of the week."""
+
+    monday = "monday"
+    tuesday = "tuesday"
+    wednesday = "wednesday"
+    thursday = "thursday"
+    friday = "friday"
+    saturday = "saturday"
 
 
 class Timetable(BaseModel):
-    """The main model to hold the entire weekly schedule.
+    """The main model to hold the entire weekly schedule, organized by day."""
 
-    Attributes:
-        monday (List[Slot]): The schedule for Monday.
-        tuesday (List[Slot]): The schedule for Tuesday.
-        wednesday (List[Slot]): The schedule for Wednesday.
-        thursday (List[Slot]): The schedule for Thursday.
-        friday (List[Slot]): The schedule for Friday.
-        saturday (List[Slot]): The schedule for Saturday.
-    """
+    days: dict[Weekday, list[Slot]]
 
-    monday: list[Slot]
-    tuesday: list[Slot]
-    wednesday: list[Slot]
-    thursday: list[Slot]
-    friday: list[Slot]
-    saturday: list[Slot]
+    def __getattr__(self, item: str) -> list[Slot]:
+        """Allows for convenient dot-access to days (e.g., timetable.monday)."""
+        try:
+            return self.days[Weekday(item)]
+        except (ValueError, KeyError):
+            raise AttributeError(f"Timetable has no attribute or day named '{item}'")
