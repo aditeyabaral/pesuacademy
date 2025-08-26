@@ -83,3 +83,11 @@ class _PageURLParams:
         MENU_ID: str = "655"
         CONTROLLER_MODE: str = "6404"
         ACTION_TYPE: str = "5"
+
+    @dataclass(frozen=True)
+    class Timetable:
+        """Static parameters for the Timetable page."""
+
+        MENU_ID: str = "669"
+        CONTROLLER_MODE: str = "6415"
+        ACTION_TYPE: str = "5"
